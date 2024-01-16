@@ -3,7 +3,7 @@ import time
 import display
 from AVIParse import *
 
-filename = 'video0_800_480.avi'
+filename = 'video.avi'
 avi = AVIParse(filename)
 ret = avi.parser_init()
 
@@ -12,22 +12,24 @@ lcd = display.DSIDisplay(
 )
 
 clock = time.clock()
+t = time.ticks_us()
 
-while avi.avi_info['cur_img']  <  avi.avi_info['total_frame']:
-    clock.tick()
+while True:
+    while avi.avi_info['cur_img'] < avi.avi_info['total_frame']:
+        clock.tick()
+        
+        frame_type = avi.get_frame()
+        if frame_type == avi.AVI_VIDEO_FRAME:
+            avi.avi_info['cur_img'] += 1
+           
+            img = image.Image(avi.avi_info['width'], avi.avi_info['height'],
+                              image.JPEG, buffer=avi.buf, copy_to_fb=True)
+            lcd.write(img, hint=image.CENTER|image.ROTATE_90)
 
-    frame_type = avi.get_frame();
-    #print(avi.avi_info['cur_img'], frame_type)
+            while time.ticks_diff(time.ticks_us(), t) < avi.avi_info['sec_per_frame']:
+                pass
+            t = time.ticks_add(t, avi.avi_info['sec_per_frame'])
 
-    if frame_type == avi.AVI_VIDEO_FRAME:
-        avi.avi_info['cur_img'] += 1
-        #print(avi.avi_info)
-        img = image.Image(800, 480, image.JPEG, buffer=avi.buf, copy_to_fb=True)
-        img.to_rgb565()
-        img.replace(transpose=True)
-        lcd.write(img)
+        print(clock.fps())
 
-
-    print(clock.fps())
-
-print("Done.")
+    avi.avi_info['cur_img'] = 0
